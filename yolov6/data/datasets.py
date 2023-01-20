@@ -65,6 +65,7 @@ class TrainValDataset(Dataset):
         self.main_process = self.rank in (-1, 0)
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
+        # NOTE(xiaowk): 找到标签和图片路径
         self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
@@ -89,6 +90,7 @@ class TrainValDataset(Dataset):
         During validation, letterbox augment is applied.
         """
         # Mosaic Augmentation
+        # NOTE(xiaowk): 数据增强，训练VID时注意删除特殊的数据增强方法
         if self.augment and random.random() < self.hyp["mosaic"]:
             img, labels = self.get_mosaic(index)
             shapes = None
@@ -120,6 +122,7 @@ class TrainValDataset(Dataset):
 
             shapes = (h0, w0), ((h * ratio / h0, w * ratio / w0), pad)  # for COCO mAP rescaling
 
+            # NOTE(xiaowk): 获取对应的标签
             labels = self.labels[index].copy()
             if labels.size:
                 w *= ratio
@@ -140,6 +143,7 @@ class TrainValDataset(Dataset):
                 )  # bottom right y
                 labels[:, 1:] = boxes
 
+            # NOTE(xiaowk): 注意数据增强方法
             if self.augment:
                 img, labels = random_affine(
                     img,
@@ -164,6 +168,7 @@ class TrainValDataset(Dataset):
             boxes[:, 3] = (labels[:, 4] - labels[:, 2]) / h  # height
             labels[:, 1:] = boxes
 
+        # NOTE(xiaowk): 注意数据增强方法
         if self.augment:
             img, labels = self.general_augment(img, labels)
 
@@ -212,19 +217,29 @@ class TrainValDataset(Dataset):
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
     def get_imgs_labels(self, img_dir):
-
+        
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         valid_img_record = osp.join(
             osp.dirname(img_dir), "." + osp.basename(img_dir) + ".json"
         )
         NUM_THREADS = min(8, os.cpu_count())
 
-        img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
+        # NOTE(xiaowk): 获取所有图片并且检查是否是合法的格式
+        # img_paths = glob.glob(osp.join(img_dir, "**/*"), recursive=True)
+        img_paths = []
+        with open(img_dir, "r") as f:
+            line = f.readline()
+            while line:
+                line.replace("\n", "").replace("\r", "")
+                img_paths.append(line)
+                line = f.readline()
+
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
         assert img_paths, f"No images found in {img_dir}."
 
+        # NOTE(xiaowk): hash 训VID的时候可以关掉
         img_hash = self.get_hash(img_paths)
         if osp.exists(valid_img_record):
             with open(valid_img_record, "r") as f:
@@ -265,19 +280,20 @@ class TrainValDataset(Dataset):
                 json.dump(cache_info, f)
 
         # check and load anns
-        base_dir = osp.basename(img_dir)
-        if base_dir != "":
-            label_dir = osp.join(
-            osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
-            )
-            assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
-        else:
-            sub_dirs= []
-            label_dir = img_dir
-            for rootdir, dirs, files in os.walk(label_dir):
-                for subdir in dirs:
-                    sub_dirs.append(subdir)
-            assert "labels" in sub_dirs, f"Could not find a labels directory!"
+        # NOTE(xiaowk): 加载标签
+        # base_dir = osp.basename(img_dir)
+        # if base_dir != "":
+        #     label_dir = osp.join(
+        #     osp.dirname(osp.dirname(img_dir)), "labels", osp.basename(img_dir)
+        #     )
+        #     assert osp.exists(label_dir), f"{label_dir} is an invalid directory path!"
+        # else:
+        #     sub_dirs= []
+        #     label_dir = img_dir
+        #     for rootdir, dirs, files in os.walk(label_dir):
+        #         for subdir in dirs:
+        #             sub_dirs.append(subdir)
+        #     assert "labels" in sub_dirs, f"Could not find a labels directory!"
 
 
         # Look for labels in the save relative dir that the images are in
@@ -287,11 +303,13 @@ class TrainValDataset(Dataset):
 
 
         img_paths = list(img_info.keys())
-        label_paths = sorted(
-            osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
-            for p in img_paths
-        )
-        assert label_paths, f"No labels found in {label_dir}."
+        # label_paths = sorted(
+        #     osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
+        #     for p in img_paths
+        # )
+        label_paths = [p.replace("Data", "labels") for p in img_paths]
+        # assert label_paths, f"No labels found in {label_dir}."
+        assert label_paths, f"No labels found."
         label_hash = self.get_hash(label_paths)
         if "label_hash" not in cache_info or cache_info["label_hash"] != label_hash:
             self.check_labels = True
