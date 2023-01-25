@@ -49,7 +49,8 @@ class Trainer:
         self.data_dict = load_yaml(args.data_path)
         self.num_classes = self.data_dict['nc']
         self.do_pr_metric = False
-        self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
+        # NOTE(xiaowk)：数据采样
+        self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict, sample=0.1)
         # get model and optimizer
         model = self.get_model(args, cfg, self.num_classes, device)
         if self.args.distill:
@@ -103,6 +104,7 @@ class Trainer:
         try:
             self.train_before_loop()
             for self.epoch in range(self.start_epoch, self.max_epoch):
+                # NOTE(xiaowk):增加一步采样策略
                 self.train_in_loop(self.epoch)
             self.strip_model()
 
@@ -297,7 +299,10 @@ class Trainer:
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
             self.cfg.data_aug.mixup = 0.0
-            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
+            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
+        else:
+            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
+
         self.model.train()
         if self.rank != -1:
             self.train_loader.sampler.set_epoch(self.epoch)
@@ -346,7 +351,7 @@ class Trainer:
             self.last_opt_step = curr_step
 
     @staticmethod
-    def get_data_loader(args, cfg, data_dict):
+    def get_data_loader(args, cfg, data_dict, sample=1):
         train_path, val_path = data_dict['train'], data_dict['val']
         # check data
         nc = int(data_dict['nc'])
@@ -357,7 +362,7 @@ class Trainer:
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                          hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
-                                         check_labels=args.check_labels, data_dict=data_dict, task='train')[0]
+                                         check_labels=args.check_labels, data_dict=data_dict, task='train', sample=sample)[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
@@ -370,7 +375,7 @@ class Trainer:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=rect, rank=-1, pad=pad,
                                            workers=args.workers, check_images=args.check_images,
-                                           check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
+                                           check_labels=args.check_labels, data_dict=data_dict, task='val', sample=sample)[0]
 
 
 

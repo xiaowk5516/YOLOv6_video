@@ -58,6 +58,7 @@ class TrainValDataset(Dataset):
         rank=-1,
         data_dict=None,
         task="train",
+        sample=1,
     ):
         assert task.lower() in ("train", "val", "test", "speed"), f"Not supported task: {task}"
         t1 = time.time()
@@ -66,7 +67,7 @@ class TrainValDataset(Dataset):
         self.task = self.task.capitalize()
         self.class_names = data_dict["names"]
         # NOTE(xiaowk): 找到标签和图片路径
-        self.img_paths, self.labels = self.get_imgs_labels(self.img_dir)
+        self.img_paths, self.labels = self.get_imgs_labels(self.img_dir, sample=sample)
         if self.rect:
             shapes = [self.img_info[p]["shape"] for p in self.img_paths]
             self.shapes = np.array(shapes, dtype=np.float64)
@@ -216,7 +217,7 @@ class TrainValDataset(Dataset):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
-    def get_imgs_labels(self, img_dir):
+    def get_imgs_labels(self, img_dir, sample=1):
         
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         valid_img_record = osp.join(
@@ -230,13 +231,15 @@ class TrainValDataset(Dataset):
         with open(img_dir, "r") as f:
             line = f.readline()
             while line:
-                line.replace("\n", "").replace("\r", "")
-                img_paths.append(line)
+                line = line.strip("\n").strip("\r")
+                if random.random() <= sample:
+                    img_paths.append(line)
                 line = f.readline()
-
+        
         img_paths = sorted(
             p for p in img_paths if p.split(".")[-1].lower() in IMG_FORMATS and os.path.isfile(p)
         )
+
         assert img_paths, f"No images found in {img_dir}."
 
         # NOTE(xiaowk): hash 训VID的时候可以关掉
@@ -307,7 +310,13 @@ class TrainValDataset(Dataset):
         #     osp.join(label_dir, _new_rel_path_with_ext(img_dir, p, ".txt"))
         #     for p in img_paths
         # )
-        label_paths = [p.replace("Data", "labels") for p in img_paths]
+        label_paths = []
+        for img_path in img_paths:
+            label_path = img_path.replace("Data", "labels")
+            label_path = label_path[:-len(img_path.split('.')[-1])]+"txt"
+            assert osp.isfile(label_path), f"not file {label_path}"
+            label_paths.append(label_path)
+
         # assert label_paths, f"No labels found in {label_dir}."
         assert label_paths, f"No labels found."
         label_hash = self.get_hash(label_paths)

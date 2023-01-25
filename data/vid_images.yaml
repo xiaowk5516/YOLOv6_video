@@ -1,0 +1,10 @@
+# Please insure that your custom_dataset are put in same parent dir with YOLOv6_DIR
+train: /data/xiaoweikang/data/ILSVRC2015/train.txt # train images
+val: /data/xiaoweikang/data/ILSVRC2015/val.txt # val images
+test: /data/xiaoweikang/data/ILSVRC2015/test.txt # test images (optional)
+
+# whether it is coco dataset, only coco dataset should be set to True.
+is_coco: False
+# Classes
+nc: 30  # number of classes
+names: ["airplane","antelope","bear", "bicycle", "bird", "bus", "car", "cattle", "dog", "domestic_cat", "elephant", "fox", "giant_panda", "hamster", "horse", "lion", "lizard", "monkey", "motorcycle", "rabbit", "red_panda", "sheep", "snake", "squirrel", "tiger", "train", "turtle", "watercraft", "whale", "zebra"]
