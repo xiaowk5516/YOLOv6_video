@@ -32,7 +32,7 @@ class Trainer:
     def __init__(self, args, cfg, device):
         if args.wandb:
             import wandb
-            wandb.init(project="YOLOV6_pro", name=args.name,entity="yangyang0201", config=args) #entity is your wandb account name
+            wandb.init(project="YOLOV6_pro", name=args.name,entity="xiaowk5516", config=args) #entity is your wandb account name
         self.args = args
         self.cfg = cfg
         self.device = device
@@ -375,7 +375,7 @@ class Trainer:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=rect, rank=-1, pad=pad,
                                            workers=args.workers, check_images=args.check_images,
-                                           check_labels=args.check_labels, data_dict=data_dict, task='val', sample=sample)[0]
+                                           check_labels=args.check_labels, data_dict=data_dict, task='val')[0]
 
 
 
