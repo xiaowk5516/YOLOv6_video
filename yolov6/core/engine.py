@@ -32,7 +32,7 @@ class Trainer:
     def __init__(self, args, cfg, device):
         if args.wandb:
             import wandb
-            wandb.init(project="YOLOV6_pro", name=args.name,entity="yangyang0201", config=args) #entity is your wandb account name
+            wandb.init(project="Still-YoloFV", name=args.name, entity="xiaowk5516", config=args) #entity is your wandb account name
         self.args = args
         self.cfg = cfg
         self.device = device
@@ -50,8 +50,9 @@ class Trainer:
         self.num_classes = self.data_dict['nc']
         self.do_pr_metric = False
         # NOTE(xiaowk)：数据采样
-        self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict, sample=0.1)
+        self.train_loader, self.val_loader = self.get_data_loader(args, cfg, self.data_dict)
         # get model and optimizer
+        # NOTE(xiaowk): 加载模型
         model = self.get_model(args, cfg, self.num_classes, device)
         if self.args.distill:
             self.teacher_model = self.get_teacher_model(args, cfg, self.num_classes, device)
@@ -206,6 +207,7 @@ class Trainer:
             # write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
 
     def eval_model(self):
+        # TODO(xiaowk)：修改eval模块
         if not hasattr(self.cfg, "eval_params"):
             if self.args.do_pr_metric:
                 self.do_pr_metric = True
@@ -299,9 +301,9 @@ class Trainer:
         if self.epoch == self.max_epoch - self.args.stop_aug_last_n_epoch:
             self.cfg.data_aug.mosaic = 0.0
             self.cfg.data_aug.mixup = 0.0
-            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
+            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
         else:
-            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
+            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict)
 
         self.model.train()
         if self.rank != -1:
@@ -351,7 +353,7 @@ class Trainer:
             self.last_opt_step = curr_step
 
     @staticmethod
-    def get_data_loader(args, cfg, data_dict, sample=1):
+    def get_data_loader(args, cfg, data_dict):
         train_path, val_path = data_dict['train'], data_dict['val']
         # check data
         nc = int(data_dict['nc'])
@@ -362,7 +364,8 @@ class Trainer:
         train_loader = create_dataloader(train_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                          hyp=dict(cfg.data_aug), augment=True, rect=False, rank=args.local_rank,
                                          workers=args.workers, shuffle=True, check_images=args.check_images,
-                                         check_labels=args.check_labels, data_dict=data_dict, task='train', sample=sample)[0]
+                                         check_labels=args.check_labels, data_dict=data_dict, task='train', 
+                                         step=args.step, sample_rate=args.sample_rate)[0]
         # create val dataloader
         val_loader = None
         if args.rank in [-1, 0]:
@@ -375,7 +378,8 @@ class Trainer:
             val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
                                            hyp=dict(cfg.data_aug), rect=rect, rank=-1, pad=pad,
                                            workers=args.workers, check_images=args.check_images,
-                                           check_labels=args.check_labels, data_dict=data_dict, task='val', sample=sample)[0]
+                                           check_labels=args.check_labels, data_dict=data_dict, task='val', 
+                                           step=args.step)[0]
 
 
 

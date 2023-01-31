@@ -5,6 +5,8 @@
 
 import os
 from torch.utils.data import dataloader, distributed
+import random
+from torch.utils.data.sampler import Sampler,BatchSampler,SequentialSampler
 
 from .datasets import TrainValDataset
 from yolov6.utils.events import LOGGER
@@ -27,7 +29,8 @@ def create_dataloader(
     shuffle=False,
     data_dict=None,
     task="Train",
-    sample=1,
+    step=16,
+    sample_rate=1,
 ):
     """Create general dataloader.
 
@@ -53,7 +56,8 @@ def create_dataloader(
             rank=rank,
             data_dict=data_dict,
             task=task,
-            sample=sample,
+            step=step,
+            sample_rate=sample_rate,
         )
 
     batch_size = min(batch_size, len(dataset))
@@ -64,22 +68,49 @@ def create_dataloader(
             workers,
         ]
     )  # number of workers
-    sampler = (
-        None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
-    )
+    # sampler = (
+    #     None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
+    # )
+    sampler = VIDBatchSampler(TrainSampler(dataset), batch_size, drop_last=False)
     return (
         TrainValDataLoader(
             dataset,
-            batch_size=batch_size,
-            shuffle=shuffle and sampler is None,
+            # batch_size=batch_size,
+            # shuffle=shuffle and sampler is None,
             num_workers=workers,
-            sampler=sampler,
+            batch_sampler=sampler,
             pin_memory=True,
             collate_fn=TrainValDataset.collate_fn,
         ),
         dataset,
     )
 
+class TrainSampler(Sampler):
+    def __init__(self,data_source):
+        super().__init__(data_source)
+        self.data_source = data_source
+
+    def __iter__(self):
+        random.shuffle(self.data_source.snippets)
+        return iter(self.data_source.snippets)
+
+    def __len__(self):
+        return len(self.data_source)
+
+
+class VIDBatchSampler(BatchSampler):
+    def __iter__(self):
+        batch = []
+        for ele in self.sampler:
+            for filename in ele:
+                batch.append(filename)
+                if (len(batch)) == self.batch_size:
+                    yield batch
+                    batch = []
+        if len(batch)>0 and not self.drop_last:
+            yield batch
+    def __len__(self):
+        return len(self.sampler)
 
 class TrainValDataLoader(dataloader.DataLoader):
     """Dataloader that reuses workers

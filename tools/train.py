@@ -25,6 +25,8 @@ def get_args_parser(add_help=True):
     parser = argparse.ArgumentParser(description='YOLOv6 PyTorch Training', add_help=add_help)
     parser.add_argument('--data-path', default='./data/car.yaml', type=str, help='path of dataset')
     parser.add_argument('--conf-file', default='./configs/yolov6n.py', type=str, help='experiments description file')
+    parser.add_argument('--step', default=16, type=int, help='step of aggregation')
+    parser.add_argument('--sample-rate', default=1, type=float, help='sample of train')
     parser.add_argument('--img-size', default=640, type=int, help='train, val image size (pixels)')
     parser.add_argument('--batch-size', default=4, type=int, help='total batch size for all GPUs')
     parser.add_argument('--epochs', default=300, type=int, help='number of total epochs to run')
