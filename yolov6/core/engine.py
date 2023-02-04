@@ -301,7 +301,7 @@ class Trainer:
             self.cfg.data_aug.mixup = 0.0
             self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
         else:
-            self.train_loader, self.val_loader = self.get_data_loader(self.args, self.cfg, self.data_dict, sample=0.1)
+            self.train_loader, _ = self.get_data_loader(self.args, self.cfg, self.data_dict, disval=False, sample=0.1)
 
         self.model.train()
         if self.rank != -1:
@@ -351,7 +351,7 @@ class Trainer:
             self.last_opt_step = curr_step
 
     @staticmethod
-    def get_data_loader(args, cfg, data_dict, sample=1):
+    def get_data_loader(args, cfg, data_dict, disval=True, sample=1):
         train_path, val_path = data_dict['train'], data_dict['val']
         # check data
         nc = int(data_dict['nc'])
@@ -365,7 +365,7 @@ class Trainer:
                                          check_labels=args.check_labels, data_dict=data_dict, task='train', sample=sample)[0]
         # create val dataloader
         val_loader = None
-        if args.rank in [-1, 0]:
+        if args.rank in [-1, 0] and disval:
             if args.not_infer_on_rect:
                 pad = 0
                 rect = False

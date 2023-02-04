@@ -217,7 +217,7 @@ class TrainValDataset(Dataset):
             l[:, 0] = i  # add target image index for build_targets()
         return torch.stack(img, 0), torch.cat(label, 0), path, shapes
 
-    def get_imgs_labels(self, img_dir, sample=1):
+    def get_imgs_labels(self, img_dir, sample=1, discache=True):
         
         assert osp.exists(img_dir), f"{img_dir} is an invalid directory path!"
         valid_img_record = osp.join(
@@ -277,10 +277,11 @@ class TrainValDataset(Dataset):
             if msgs:
                 LOGGER.info("\n".join(msgs))
 
-            cache_info = {"information": img_info, "image_hash": img_hash}
-            # save valid image paths.
-            with open(valid_img_record, "w") as f:
-                json.dump(cache_info, f)
+            if not discache:
+                cache_info = {"information": img_info, "image_hash": img_hash}
+                # save valid image paths.
+                with open(valid_img_record, "w") as f:
+                    json.dump(cache_info, f)
 
         # check and load anns
         # NOTE(xiaowk): 加载标签
@@ -357,8 +358,9 @@ class TrainValDataset(Dataset):
                         pbar.desc = f"{nf} label(s) found, {nm} label(s) missing, {ne} label(s) empty, {nc} invalid label files"
             if self.main_process:
                 pbar.close()
-                with open(valid_img_record, "w") as f:
-                    json.dump(cache_info, f)
+                if not discache:
+                    with open(valid_img_record, "w") as f:
+                        json.dump(cache_info, f)
             if msgs:
                 LOGGER.info("\n".join(msgs))
             if nf == 0:
