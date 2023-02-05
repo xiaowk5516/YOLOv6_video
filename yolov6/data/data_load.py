@@ -8,7 +8,7 @@ from torch.utils.data import dataloader, distributed
 import random
 from torch.utils.data.sampler import Sampler,BatchSampler,SequentialSampler
 
-from .datasets import TrainValDataset
+from .datasets_ import TrainValDataset
 from yolov6.utils.events import LOGGER
 from yolov6.utils.torch_utils import torch_distributed_zero_first
 

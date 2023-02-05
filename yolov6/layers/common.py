@@ -50,7 +50,7 @@ class AggregationBlock(nn.Module):
         x0 = torch.cat([avg_out, max_out, conv1_x, conv2_x])
         b, c, w, h = x.shape
         x0 = x0.view(1, -1, w, h)
-        
+
         # attention
         ca_avg = self.f2(self.relu(self.f1(self.avg_pool(x0))))
         ca_max = self.f2(self.relu(self.f1(self.max_pool(x0))))
@@ -66,6 +66,88 @@ class AggregationBlock(nn.Module):
         x = self.nonlinearity(x)
 
         return x
+
+
+class AggregationBlock2(nn.Module):
+    def __init__(self, in_channels, out_channels, batch_size, kernel_size=3, ratio=4):
+        super(AggregationBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, 1, kernel_size, padding=kernel_size//2, bias=False)
+        self.conv2 = nn.Conv2d(in_channels, 1, kernel_size, padding=kernel_size//2, bias=False)
+        
+        # channel attention
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.f1 = nn.Conv2d(batch_size*4, batch_size*4 // ratio, 1, bias=False)
+        self.relu = nn.ReLU()
+        self.f2 = nn.Conv2d(batch_size*4 // ratio, batch_size*4, 1, bias=False)
+        self.sigmoid = nn.Sigmoid()
+        self.nonlinearity = nn.ReLU()
+    
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out = torch.mean(x, dim=1, keepdim=True)
+        conv1_x = self.conv1(x)
+        conv2_x = self.conv2(x)
+        x0 = torch.cat([avg_out, max_out, conv1_x, conv2_x])
+        b, c, w, h = x.shape
+        x0 = x0.view(1, -1, w, h)
+
+        # attention
+        ca_avg = self.f2(self.relu(self.f1(self.avg_pool(x0))))
+        ca_max = self.f2(self.relu(self.f1(self.max_pool(x0))))
+        ca_grade = ca_avg + ca_max
+        ca_grade = ca_grade.view(1, -1, 4, 1, 1)
+        ca_grade = torch.sum(ca_grade, dim=2)
+        ca_grade = self.sigmoid(ca_grade)
+        ca_grade = ca_grade.transpose(0, 1)
+        
+        x0 = x * ca_grade
+        x0 = torch.sum(x0, dim=0, keepdim=True)
+        x = 0.5*x + 0.5*x0
+        # x = self.nonlinearity(x)
+
+        return x
+
+# class AggregationBlock3(nn.Module):
+#     def __init__(self, in_channels, out_channels, batch_size, kernel_size=3, ratio=4):
+#         super(AggregationBlock, self).__init__()
+#         self.conv1 = nn.Conv2d(in_channels, 1, kernel_size, padding=kernel_size//2, bias=False)
+#         self.conv2 = nn.Conv2d(in_channels, 1, kernel_size, padding=kernel_size//2, bias=False)
+        
+#         # channel attention
+#         self.avg_pool = nn.AdaptiveAvgPool2d(1)
+#         self.max_pool = nn.AdaptiveMaxPool2d(1)
+#         self.f1 = nn.Conv2d(batch_size*4, batch_size*4 // ratio, 1, bias=False)
+#         self.relu = nn.ReLU()
+#         self.f2 = nn.Conv2d(batch_size*4 // ratio, batch_size*4, 1, bias=False)
+#         self.sigmoid = nn.Sigmoid()
+#         self.nonlinearity = nn.ReLU()
+#         self.block = RepBlock(in_channels, out_channels, 4)
+    
+#     def forward(self, x):
+#         avg_out = torch.mean(x, dim=1, keepdim=True)
+#         max_out = torch.mean(x, dim=1, keepdim=True)
+#         conv1_x = self.conv1(x)
+#         conv2_x = self.conv2(x)
+#         x0 = torch.cat([avg_out, max_out, conv1_x, conv2_x])
+#         b, c, w, h = x.shape
+#         x0 = x0.view(1, -1, w, h)
+
+#         # attention
+#         ca_avg = self.f2(self.relu(self.f1(self.avg_pool(x0))))
+#         ca_max = self.f2(self.relu(self.f1(self.max_pool(x0))))
+#         ca_grade = ca_avg + ca_max
+#         ca_grade = ca_grade.view(1, -1, 4, 1, 1)
+#         ca_grade = torch.sum(ca_grade, dim=2)
+#         ca_grade = self.sigmoid(ca_grade)
+#         ca_grade = ca_grade.transpose(0, 1)
+        
+#         x0 = x * ca_grade
+#         x0 = torch.sum(x0, dim=0, keepdim=True)
+#         x = 0.5*x + 0.5*x0
+#         # x = self.nonlinearity(x)
+
+#         return x
 
 class Conv(nn.Module):
     '''Normal Conv with SiLU activation'''

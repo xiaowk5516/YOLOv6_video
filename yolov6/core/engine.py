@@ -212,7 +212,7 @@ class Trainer:
             if self.args.do_pr_metric:
                 self.do_pr_metric = True
             results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                            batch_size=self.batch_size // self.world_size * 2,
+                            batch_size=self.batch_size // self.world_size,
                             img_size=self.img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
                             conf_thres=0.03,
@@ -233,7 +233,7 @@ class Trainer:
                     return default_value
             eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
             results, vis_outputs, vis_paths = eval.run(self.data_dict,
-                            batch_size=get_cfg_value(self.cfg.eval_params, "batch_size", self.batch_size // self.world_size * 2),
+                            batch_size=get_cfg_value(self.cfg.eval_params, "batch_size", self.batch_size // self.world_size),
                             img_size=eval_img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
                             conf_thres=get_cfg_value(self.cfg.eval_params, "conf_thres", 0.03),
@@ -374,8 +374,9 @@ class Trainer:
                 rect = False
             else:
                 pad = 0.5
-                rect = True
-            val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size * 2, grid_size,
+                # rect = True
+                rect = False
+            val_loader = create_dataloader(val_path, args.img_size, args.batch_size // args.world_size, grid_size,
                                            hyp=dict(cfg.data_aug), rect=rect, rank=-1, pad=pad,
                                            workers=args.workers, check_images=args.check_images,
                                            check_labels=args.check_labels, data_dict=data_dict, task='val', 

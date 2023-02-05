@@ -25,7 +25,7 @@ def parse_model(d, ch = 3,nc = 0):  # model_dict, input_channels(3)
                 pass
 
         n = n_  = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [Conv_C3,Bottleneck, SPPF,C3,RepBlock,SimConv,RepVGGBlock,Transpose,SimSPPF,SPPCSPC,BepC3, BepBotC3, CSPNeXtLayer, ConvModule, Conv]:
+        if m in [AggregationBlock, Conv_C3,Bottleneck, SPPF,C3,RepBlock,SimConv,RepVGGBlock,Transpose,SimSPPF,SPPCSPC,BepC3, BepBotC3, CSPNeXtLayer, ConvModule, Conv]:
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 8)
 

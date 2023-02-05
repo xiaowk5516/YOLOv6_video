@@ -15,15 +15,15 @@ backbone:
    [-1, 1, SimSPPF, [1024, 5]]]  # 9
 
 neck:
-  [[-1, 1, SimConv, [256, 1, 1]],
-   [-1, 1, Transpose, [256]],
-   [[-1, 6], 1, Concat, [1]],
-   [-1, 12, RepBlock, [256]],
+  [[-1, 1, SimConv, [256, 1, 1]], # 10
+   [-1, 1, Transpose, [256]],     # 11
+   [[-1, 6], 1, Concat, [1]],     # 12
+   [-1, 12, RepBlock, [256]],     # 13
 
-   [-1, 1, SimConv, [128, 1, 1]],
-   [-1, 1, Transpose, [128]],
-   [[-1, 4], 1, Concat, [1]],
-   [-1, 12, RepBlock, [128]],   #out
+   [-1, 1, SimConv, [128, 1, 1]], # 14
+   [-1, 1, Transpose, [128]],     # 15
+   [[-1, 4], 1, Concat, [1]],     # 16
+   [-1, 12, RepBlock, [128]],     # 17 out
 
    [-1, 1, SimConv, [128, 3, 2]],
    [[-1, 14], 1, Concat, [1]],  # cat head P4
